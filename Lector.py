@@ -1,8 +1,7 @@
+"""This script reads an XLSB file using LibreOffice in headless mode and retrieves data from a cell range. """
 import os
 import subprocess
 import time
-from PIL import ImageGrab
-from fpdf import FPDF
 import uno
 
 # Function to start LibreOffice in headless mode
@@ -25,19 +24,6 @@ def get_cell_range_data(sheet, cell_range):
         data.append(row_data)
     return data
 
-# Function to export cell range to PDF with screenshot-like appearance
-def export_to_pdf_screenshot(data, left, top, right, bottom):
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_auto_page_break(auto=True, margin=15)
-    screenshot_image = "screenshot.png"
-    data_image = ImageGrab.grab(bbox=(left, top, right, bottom))  # Capture screenshot of cell range
-    data_image.save(screenshot_image)
-    pdf.image(screenshot_image, x=10, y=10, w=180)
-    pdf_output = "output_screenshot.pdf"
-    pdf.output(pdf_output)
-    print(f"PDF with screenshot-like appearance created successfully: {pdf_output}")
-
 # Replace 'file_path' with the path to your XLSX file
 file_path = 'ESTADO_DE_CARTERA.xlsb'
 
@@ -50,7 +36,7 @@ else:
 start_libreoffice()
 
 # Wait for LibreOffice to start (adjust sleep time if needed)
-time.sleep(5)
+time.sleep(3)
 
 # Connect to LibreOffice
 local_context = uno.getComponentContext()
@@ -67,25 +53,26 @@ else:
     print(f'Error loading file {file_path}.')
 
 # Get a cell range
-sheet = document.Sheets.getByIndex(2)
-# Modify the cell range as needed
-cell_range = "B6:H17"
+sheet = document.Sheets.getByName("ESTADO DE CARTERA")
 
-# Get position of the cell range
-cell_range_obj = sheet.getCellRangeByName(cell_range)
-left, top, right, bottom = cell_range_obj.RangeAddress.StartColumn * 64, cell_range_obj.RangeAddress.StartRow * 20, cell_range_obj.RangeAddress.EndColumn * 64, cell_range_obj.RangeAddress.EndRow * 20
+# Function to retrieve data from a column
+def get_column_data(sheet, column_index):
+    data = []
+    max_row = sheet.Rows.Count
+    print(f"Max Row: {max_row}")
+    row_index = 301
+    for i in range(max_row):
+        row_index += 1
+        cell = sheet.getCellByPosition(column_index, row_index)
+        cell_value = cell.getString()
+        print(f"Row: {row_index}, Column: {column_index}, Value: {cell_value}")
+        if not cell_value:
+            break
+        data.append(cell_value)
+    return data
 
-# Get data from cell range
-data = get_cell_range_data(sheet, cell_range)
 
-# Recalculate the formulas
-document.calculateAll()
-
-# Export cell range to PDF with screenshot-like appearance
-export_to_pdf_screenshot(data, left, top, right, bottom)
-
-# Close the document
-document.close(True)
-
-# Close LibreOffice
-subprocess.Popen(['pkill', 'soffice.bin'])
+# Get all the data from the specified column
+column_index = 1  # Adjust the column index as needed
+column_data = get_column_data(sheet, column_index)
+print(column_data)
